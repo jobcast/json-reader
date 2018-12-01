@@ -130,7 +130,7 @@
           '<strong>{0}{1}:</strong> {2}',
           tag,
           getAttributesHtml(elem),
-          getValue(elem)
+          replaceUrlWithLinks(getValue(elem))
         );
 
         html += '<ul>';
@@ -160,10 +160,9 @@
         else return raw;
       };
 
-      // this currently escapes HTML links, so don't use this right now
       var replaceUrlWithLinks = function(text) {
-        var pattern = /^(http:\/\/|https:\/\/)[-A-Za-z0-9+&#\/%?=_\*\:\(\)\.]*[-A-Za-z0-9+&#\/%=_\*\:\(\)]$/gi;
-        return text.replace(pattern, '<a href="$1">$1</a>');
+        var pattern = /^(http:\/\/|https:\/\/)([-A-Za-z0-9+&#\/%?=_\*\:;\(\)\.]*[-A-Za-z0-9+&#\/%=_\*\:;\(\)])$/gi;
+        return text.replace(pattern, '<a target="_blank" href="$1$2">$1$2</a>');
       };
 
       var getTextNodes = function(elem) {
