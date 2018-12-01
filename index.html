@@ -24,7 +24,7 @@
       margin: 20px;
     }
 
-    .uploader {
+    .narrow {
       width: 100%;
       max-width: 330px;
       padding: 15px;
@@ -36,26 +36,28 @@
   <div id="container"></div>
 
   <script id="uploader" type="text/html">
-    <div class="uploader">
+    <div class="narrow">
       <input type="checkbox" id="encode" name="encode"><label for="encode">HTML Encode</label>
       <br />
       <input type="file" name="file" />
     </div>
   </script>
 
-  <script id="loader" type="text/html">
-    <div class="loader">&nbsp;</div>
-  </script>
-
   <script id="progress" type="text/html">
-    <div>Upload progress: <%- percent %> percent</div>
+    <div class="narrow">
+      <div class="text-center" >Upload progress: <%- percent %>%</div>
+      <div class="progress">
+        <div class="progress-bar progress-bar-striped" role="progressbar" style="width: <%- percent %>%" aria-valuenow="<%- percent %>" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+    </div>
   </script>
 
   <script id="error" type="text/html">
-    <div style="color:red;">Error: <%= message %></div>
+    <div class="narrow text-center" style="color:red;">Error: <%= message %></div>
   </script>
 
   <script id="result" type="text/html"></script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
   <script>
@@ -71,7 +73,6 @@
 
     (function($) {
       var uploader = _.template($('#uploader').html());
-      var loader = _.template($('#loader').html());
       var progress = _.template($('#progress').html());
       var error = _.template($('#error').html());
       var result = _.template($('#result').html());
@@ -82,13 +83,17 @@
       $('#container').on('change', 'input[type=file]', function(e) {
         encode = $('#encode').prop('checked');
 
-        $('#container').html(loader());
+        $('#container').html(progress({ percent: 0 }));
 
         var input = e.target;
         var reader = new FileReader();
 
         reader.onload = function() {
-          $('#container').html(fromXml($.parseXML(reader.result)));
+          try {
+            $('#container').html(fromXml($.parseXML(reader.result)));
+          } catch {
+            $('#container').html(error({ message: 'Error reading file.' }));
+          }
         };
 
         reader.onprogress = function(e) {
