@@ -17,7 +17,7 @@
       margin: auto;
     }
 
-    .result {
+    .flex-mt20 {
       margin-top: 20px;
     }
   </style>
@@ -50,7 +50,8 @@
   </script>
 
   <script id="result" type="text/html">
-    <div class="result"><%= xml %></div>
+    <div class="flex-mt20 text-center"><button data-action="start-over" class="btn btn-primary">Start Over</button></div>
+    <div><%= xml %></div>
   </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
@@ -73,7 +74,13 @@
       var result = _.template($('#result').html());
       var encode = true;
 
-      $('#container').html(uploader());
+      var startOver = function() {
+        $('#container').html(uploader());
+      };
+
+      $('#container').on('click', '[data-action=start-over]', function(e) {
+        startOver();
+      });
 
       $('#container').on('change', 'input[type=file]', function(e) {
         encode = $('#encode').prop('checked');
@@ -185,6 +192,8 @@
       var getAttributeHtml = function(attr) {
         return String.format('{0}|{1}', attr.nodeName, attr.value);
       };
+
+      startOver();
     })(jQuery);
   </script>
 </body>
