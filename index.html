@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <title>XML Parse</title>
+  <title>JSON Parse</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous" />
   <style>
     body {
@@ -33,17 +33,15 @@
   <div id="container"></div>
 
   <script id="uploader" type="text/html">
-    <div class="narrow">
-      <input type="checkbox" id="encode" name="encode"><label for="encode">HTML Encode</label>
-      <br />
+    <div class="mt-4 mb-4 narrow">
       <label class="btn btn-primary">
-          Choose File <input type="file" name="file" accept="application/xml" hidden />
+          Choose File <input type="file" name="file" accept="application/json" hidden />
       </label>
     </div>
   </script>
 
   <script id="progress" type="text/html">
-    <div class="narrow">
+    <div class="mt-4 mb-4 narrow">
       <div class="text-center" >Upload progress: <%- percent %>%</div>
       <div class="progress">
         <div class="progress-bar progress-bar-striped" role="progressbar" style="width: <%- percent %>%" aria-valuenow="<%- percent %>" aria-valuemin="0" aria-valuemax="100"></div>
@@ -52,33 +50,22 @@
   </script>
 
   <script id="error" type="text/html">
-    <div class="narrow text-center" style="color:red;">Error: <%= message %></div>
+    <div class="mt-4 mb-4 narrow text-center" style="color:red;">Error: <%= message %></div>
   </script>
 
   <script id="result" type="text/html">
-    <div class="flex-mt20 text-center"><button data-action="start-over" class="btn btn-primary">Start Over</button></div>
-    <div><%= xml %></div>
+    <div class="mt-4 mb-4 flex-mt20 text-center"><button data-action="start-over" class="btn btn-primary">Start Over</button></div>
+    <div><%= json %></div>
   </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
   <script>
-    String.format = function() {
-      var s = arguments[0],
-        i = arguments.length - 1;
-
-      while (i--)
-        s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), arguments[i + 1]);
-
-      return s;
-    };
-
     (function($) {
       var uploader = _.template($('#uploader').html());
       var progress = _.template($('#progress').html());
       var error = _.template($('#error').html());
       var result = _.template($('#result').html());
-      var encode = true;
 
       var startOver = function() {
         $('#container').html(uploader());
@@ -89,8 +76,6 @@
       });
 
       $('#container').on('change', 'input[type=file]', function(e) {
-        encode = $('#encode').prop('checked');
-
         $('#container').html(progress({ percent: 0 }));
 
         var input = e.target;
@@ -98,7 +83,11 @@
 
         reader.onload = function() {
           try {
-            $('#container').html(result({ xml: fromXml($.parseXML(reader.result))}));
+            const lines = reader.result.split('\n')
+            .filter(line => line) // There's usually an empty line at the end, so filter it out
+            .map(line => JSON.parse(line))
+            .map(line => formatObject(line));
+            $('#container').html(result({ json: lines.join('<hr />')}));
           } catch {
             $('#container').html(error({ message: 'Error reading file.' }));
           }
@@ -129,74 +118,25 @@
         reader.readAsText(file);
       });
 
-      var fromXml = function(xml) {
-        return ($xml = getHtml($(xml).children()[0]));
-      };
-
-      var getHtml = function(elem) {
-        var tag = elem.nodeName,
-          html = '<li>';
-
-        html += String.format(
-          '<strong>{0}{1}:</strong> {2}',
-          tag,
-          getAttributesHtml(elem),
-          replaceUrlWithLinks(getValue(elem))
-        );
-
-        html += '<ul>';
-        $(elem)
-          .children()
-          .each(function() {
-            html += getHtml(this);
-          });
-
-        html += '</ul></li>';
-
-        if (tag == 'SEP') html += '<hr />';
-
-        return html;
-      };
-
-      var getValue = function(elem) {
-        var html = [];
-        getTextNodes(elem).each(function() {
-          html.push(formatValue(this.textContent));
-        });
-        return html.join('');
-      };
-
-      var formatValue = function(raw) {
-        if (encode) return _.escape(raw).replace(/\r?\n/g, '<br />');
-        else return raw;
-      };
+      const formatObject = (obj) => 
+        (typeof obj === 'object' && obj !== null) ?
+          `<table>
+            <tbody>
+            ${Object.keys(obj).map(key => 
+              `<tr>
+                <td style="border: 1px solid #ccc; padding: 8px; background: #eee;" valign="top"><strong>${key}</strong></td>
+                <td style="border: 1px solid #ccc; padding: 8px;" valign="top">${formatObject(obj[key])}</td>
+              </tr>`
+            ).join('')}
+            </tbody>
+          </table>`
+        : typeof obj === 'string' ?
+          replaceUrlWithLinks(obj)
+        : obj;
 
       var replaceUrlWithLinks = function(text) {
         var pattern = /^(http:\/\/|https:\/\/)([-A-Za-z0-9+&#\/%?=_\*\:;\(\)\.]*[-A-Za-z0-9+&#\/%=_\*\:;\(\)])$/gi;
         return text.replace(pattern, '<a target="_blank" href="$1$2">$1$2</a>');
-      };
-
-      var getTextNodes = function(elem) {
-        if ($(elem).contents().length > 1) return $();
-
-        return $(elem)
-          .contents()
-          .filter(function() {
-            return this.nodeType == 3 || this.nodeType == 4; // 3 is text node, 4 is CDATA
-          });
-      };
-
-      var getAttributesHtml = function(elem) {
-        var html = [];
-        for (var i = 0; i < elem.attributes.length; i++) {
-          var attr = elem.attributes[i];
-          html.push(getAttributeHtml(attr));
-        }
-        return html.join(',');
-      };
-
-      var getAttributeHtml = function(attr) {
-        return String.format('{0}|{1}', attr.nodeName, attr.value);
       };
 
       startOver();
